@@ -1,4 +1,5 @@
 use std::net::TcpListener;
+use newsletter::startup::run;
 
 // Spawns an instance of the app.
 fn spawn_app() -> String {
@@ -6,7 +7,7 @@ fn spawn_app() -> String {
 
     let port = listener.local_addr().unwrap().port();
 
-    let server = newsletter::run(listener).expect("failed to bind address.");
+    let server = run(listener).expect("failed to bind address.");
 
     let _ = tokio::spawn(server);
 

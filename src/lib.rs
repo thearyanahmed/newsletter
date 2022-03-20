@@ -4,7 +4,7 @@ use std::net::TcpListener;
 
 #[derive(serde::Deserialize)]
 struct FormData {
-    username: String,
+    name: String,
     email: String,
 }
 

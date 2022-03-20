@@ -19,6 +19,18 @@ async fn greet(req: HttpRequest) -> impl Responder {
     format!("Hello {}!",&name)
 }
 
-async fn health_check(_req: HttpRequest) -> impl Responder {
+async fn health_check() -> impl Responder {
     HttpResponse::Ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::health_check;
+
+    #[tokio::test]
+    async fn health_check_succeeds() {
+        let res = health_check().await;
+
+        assert!(res.status().is_success())
+    }
 }

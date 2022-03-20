@@ -4,13 +4,13 @@
 set -eo pipefail
 
 if ! [ -x "$(command -v psql)" ] ; then
-	echo >&2 "psql is not install. exiting"
+	>&2 echo "psql is not install. exiting"
 	exit 1
 fi
 
 if ! [ -x "$(command -v sqlx)" ]; then
-	echo >&2 "sqlx not install. to install, run \n"
-	echo >&2 "cargo install --version=0.5.7 sqlx-cli --no-default-features --features postgres"
+	>&2 echo "sqlx not install. to install, run \n"
+	>&2 echo "cargo install --version=0.5.7 sqlx-cli --no-default-features --features postgres"
 
 	exit 1
 fi
@@ -20,16 +20,20 @@ DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_NAME="${POSTGRES_DB:=newsletter}"
 DB_PORT="${POSTGRES_PORT:=54321}"
 
-docker run \
-    -e POSTGRES_USER=${DB_USER} \
-	-e POSTGRES_PASSWORD=${DB_PASSWORD} \
-	-e POSTGRES_DB=${DB_NAME} \
-	-p "${DB_PORT}":5432 \
-	-d postgres postgres -N 1000 
+if [[ $* == *--sd* ]]; then
+    >&2 echo "skipping docker"
+else
+    docker run \
+        -e POSTGRES_USER=${DB_USER} \
+        -e POSTGRES_PASSWORD=${DB_PASSWORD} \
+        -e POSTGRES_DB=${DB_NAME} \
+        -p "${DB_PORT}":5432 \
+        -d postgres postgres -N 1000
 
-#	 \ postgres -N 1000 doesn't work
+    #	 \ postgres -N 1000 doesn't work
 
-#postgres -N 1000 is user to increase maximum number of connections for testing purpose
+    #postgres -N 1000 is user to increase maximum number of connections for testing purpose
+fi
 
 export PGPASSWORD="${DB_PASSWORD}"
 
@@ -40,9 +44,12 @@ done
 
 export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
 
-echo >&2 "dburl = ${DATABASE_URL}"
+>&2 echo "DB_URL = ${DATABASE_URL}"
 
-echo >&2 "Postgres is up and running on port ${DB_PORT}!"
+>&2 echo "Postgres is up and running on port ${DB_PORT}!"
 
 sqlx database create
+sqlx migrate run
+
+>&2 echo "postgres has been migrated."
 

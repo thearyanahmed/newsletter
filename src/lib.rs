@@ -1,6 +1,5 @@
 use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 
-#[tokio::main]
 pub async fn run() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()

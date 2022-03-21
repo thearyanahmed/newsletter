@@ -1,7 +1,9 @@
 use std::net::TcpListener;
 use newsletter::startup::run;
+use newsletter::configuration::get_configuration;
+use sqlx::{PgConnection,Connection};
 
-// Spawns an instance of the app.
+// Spawns an instance of the app. It binds to a random port.
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind to random port");
 
@@ -33,6 +35,15 @@ async fn health_check_works() {
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     let addr = spawn_app();
+
+    let config = get_configuration().expect("failed to read config");
+
+    let connection_string = config.database.connection_string();
+
+    let connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("failed to connect to database");
+
     let client = reqwest::Client::new();
 
     let form_body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -47,6 +58,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
     assert_eq!(200,response.status().as_u16());
 }
+
 #[tokio::test]
 async fn subscribe_returns_a_400_for_invalid_form_data() {
     let addr = spawn_app();
@@ -70,4 +82,3 @@ async fn subscribe_returns_a_400_for_invalid_form_data() {
         assert_eq!(400,response.status().as_u16(),"the api did not fail with 400 bad request when the payload was {}",error);
     }
 }
-

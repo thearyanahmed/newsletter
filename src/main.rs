@@ -5,6 +5,7 @@ use sqlx::PgPool;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer,JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt,EnvFilter,Registry};
+use tracing_log::LogTracer;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -27,6 +28,8 @@ async fn main() -> std::io::Result<()> {
 }
 
 fn setup_logger() {
+    LogTracer::init().expect("failed to set logger");
+
     // if RUST_LOG is absent, fallback to "info"
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"));

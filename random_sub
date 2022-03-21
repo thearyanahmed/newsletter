@@ -4,6 +4,4 @@ RANDOM_NUMBER=$(($RANDOM + $RANDOM % 112))
 
 PAYLOAD="'name=Tom&email=hello.$RANDOM_NUMBER@email.com'"
 
-echo $PAYLOAD;
-
-curl -i -X POST -d $PAYLOAD http://localhost:8000/subscriptions
+curl -i -X POST -d 'name=Tom&email=hello.$RANDOM_NUMBER@email.com' http://localhost:8000/subscriptions

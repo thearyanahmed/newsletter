@@ -1,10 +1,12 @@
 use std::net::TcpListener;
 use newsletter::startup::run;
-use newsletter::configuration::get_configuration;
+use newsletter::configuration::{get_configuration, Settings};
 use sqlx::{PgConnection,Connection};
 
 // Spawns an instance of the app. It binds to a random port.
 fn spawn_app() -> String {
+    let config = get_configuration().expect("could not load config");
+
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind to random port");
 
     let port = listener.local_addr().unwrap().port();

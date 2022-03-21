@@ -2,11 +2,14 @@ use std::net::TcpListener;
 use newsletter::startup::run;
 use newsletter::configuration::get_configuration;
 use sqlx::PgPool;
-use env_logger::Env;
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer,JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt,EnvFilter,Registry};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
+    setup_logger();
 
     let config = get_configuration().expect("failed to read configuration.");
 
@@ -21,4 +24,22 @@ async fn main() -> std::io::Result<()> {
     println!("running on {}",address);
 
     run(listener,connection_pool)?.await
+}
+
+fn setup_logger() {
+    // if RUST_LOG is absent, fallback to "info"
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+
+    let formatting_layer = BunyanFormattingLayer::new(
+        "newsletter_dev".into(),
+        std::io::stdout // output the formatting span to stdout
+    );
+
+    let subscriber = Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(formatting_layer);
+
+    set_global_default(subscriber).expect("failed to set subscriber");
 }

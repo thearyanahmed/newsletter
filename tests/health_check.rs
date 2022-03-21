@@ -1,7 +1,8 @@
 use std::net::TcpListener;
 use newsletter::startup::run;
-use newsletter::configuration::{get_configuration, Settings};
-use sqlx::PgPool;
+use newsletter::configuration::{get_configuration, Settings, DatabaseSettings};
+use sqlx::{PgPool, Executor, PgConnection, Connection};
+use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
@@ -10,15 +11,15 @@ pub struct TestApp {
 
 // Spawns an instance of the app. It binds to a random port.
 async fn spawn_app() -> TestApp {
-    let config = get_configuration().expect("could not load config");
+    let mut config = get_configuration().expect("could not load config");
+
+    config.database.database_name = Uuid::new_v4().to_string();
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind to random port");
 
     let port = listener.local_addr().unwrap().port();
 
-    let db_pool = PgPool::connect(&config.database.connection_string())
-        .await
-        .expect("failed to connect to database");
+    let db_pool = configure_database(&config.database).await;
 
     let server = run(listener, db_pool.clone()).expect("failed to bind address.");
 
@@ -30,6 +31,32 @@ async fn spawn_app() -> TestApp {
         address,
         db_pool
     }
+}
+
+// Configures the database. Creates a connection pool and runs migration.
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    let mut connection = PgConnection::connect(&config.connection_string_without_database())
+        .await
+        .expect("failed to connect to postgres.");
+
+    // create a database
+    connection.execute(
+        format!(
+            r#"CREATE DATABASE "{}";"#,
+            config.database_name
+        ).as_str()
+    )
+        .await
+        .expect("failed to created database.");
+
+    let connection_pool = PgPool::connect(&config.connection_string()).await.expect("failed to connect to pool.");
+
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("failed to migrate.");
+
+    return connection_pool;
 }
 
 #[tokio::test]

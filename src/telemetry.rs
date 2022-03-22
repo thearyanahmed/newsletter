@@ -10,7 +10,7 @@ pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Sen
         .unwrap_or_else(|_| EnvFilter::new(env_filter));
 
     let formatting_layer = BunyanFormattingLayer::new(
-        "newsletter_dev".into(),
+        name,
         std::io::stdout // output the formatting span to stdout
     );
 
@@ -18,6 +18,8 @@ pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Sen
         .with(env_filter)
         .with(JsonStorageLayer)
         .with(formatting_layer);
+
+    return subscriber;
 }
 
 pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {

@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 use newsletter::startup::run;
+use newsletter::telemetry;
 use newsletter::configuration::{get_configuration, Settings, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
 use uuid::Uuid;
@@ -11,6 +12,10 @@ pub struct TestApp {
 
 // Spawns an instance of the app. It binds to a random port.
 async fn spawn_app() -> TestApp {
+    telemetry::init_subscriber(
+        telemetry::get_subscriber("newsletter_test".into(),"debug".into())
+    );
+
     let mut config = get_configuration().expect("could not load config");
 
     config.database.database_name = Uuid::new_v4().to_string();

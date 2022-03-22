@@ -6,7 +6,7 @@ use sqlx::PgPool;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let subscriber = telemetry::get_subscriber("newsletter".into(),"info".into());
+    let subscriber = telemetry::get_subscriber("newsletter_prod".into(),"info".into());
 
     telemetry::init_subscriber(subscriber);
 

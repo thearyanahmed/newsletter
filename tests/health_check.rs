@@ -5,6 +5,7 @@ use newsletter::configuration::{get_configuration, Settings, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 
 pub struct TestApp {
     pub address: String,
@@ -52,7 +53,7 @@ async fn spawn_app() -> TestApp {
 
 // Configures the database. Creates a connection pool and runs migration.
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
-    let mut connection = PgConnection::connect(&config.connection_string_without_database())
+    let mut connection = PgConnection::connect(&config.connection_string_without_database().expose_secret())
         .await
         .expect("failed to connect to postgres.");
 
@@ -66,7 +67,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .await
         .expect("failed to created database.");
 
-    let connection_pool = PgPool::connect(&config.connection_string()).await.expect("failed to connect to pool.");
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret()).await.expect("failed to connect to pool.");
 
     sqlx::migrate!("./migrations")
         .run(&connection_pool)

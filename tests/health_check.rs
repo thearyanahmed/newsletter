@@ -4,18 +4,22 @@ use newsletter::telemetry;
 use newsletter::configuration::{get_configuration, Settings, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
 use uuid::Uuid;
+use once_cell::sync::Lazy;
 
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
 }
 
-// Spawns an instance of the app. It binds to a random port.
-async fn spawn_app() -> TestApp {
+static TRACING: Lazy<()> = Lazy::new(||{
     telemetry::init_subscriber(
         telemetry::get_subscriber("newsletter_test".into(),"debug".into())
     );
-
+});
+// Spawns an instance of the app. It binds to a random port.
+async fn spawn_app() -> TestApp {
+    Lazy::force(&TRACING);
+    
     let mut config = get_configuration().expect("could not load config");
 
     config.database.database_name = Uuid::new_v4().to_string();

@@ -25,24 +25,28 @@ pub fn get_configuration() -> Result<Settings,config::ConfigError> {
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            self.database_name
-        )
+    pub fn connection_string(&self) -> Secret<String> {
+        return Secret::new(
+            format!(
+                "postgres://{}:{}@{}:{}/{}",
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port,
+                self.database_name
+            )
+        );
     }
 
-    pub fn connection_string_without_database(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port
-        )
+    pub fn connection_string_without_database(&self) -> Secret<String> {
+        return Secret::new(
+            format!(
+                "postgres://{}:{}@{}:{}",
+                self.username,
+                self.password.expose_secret(),
+                self.host,
+                self.port
+            )
+        );
     }
 }

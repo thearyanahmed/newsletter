@@ -3,6 +3,7 @@ use newsletter::startup::run;
 use newsletter::configuration::get_configuration;
 use newsletter::telemetry;
 use sqlx::PgPool;
+use secrecy::ExposeSecret;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -14,7 +15,7 @@ async fn main() -> std::io::Result<()> {
 
     let address = format!("127.0.0.1:{}",config.application_port);
 
-    let connection_pool = PgPool::connect(&config.database.connection_string())
+    let connection_pool = PgPool::connect(&config.database.connection_string().expose_secret())
         .await
         .expect("database connection failed.");
 

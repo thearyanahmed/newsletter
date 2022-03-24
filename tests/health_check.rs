@@ -12,14 +12,22 @@ pub struct TestApp {
 }
 
 static TRACING: Lazy<()> = Lazy::new(||{
-    telemetry::init_subscriber(
-        telemetry::get_subscriber("newsletter_test".into(),"debug".into())
-    );
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = telemetry::get_subscriber(subscriber_name, default_filter_level,std::io::stdout);
+        telemetry::init_subscriber(subscriber)
+    } else {
+        let subscriber = telemetry::get_subscriber(subscriber_name, default_filter_level,std::io::sink);
+        telemetry::init_subscriber(subscriber)
+    }
 });
+
 // Spawns an instance of the app. It binds to a random port.
 async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
-    
+
     let mut config = get_configuration().expect("could not load config");
 
     config.database.database_name = Uuid::new_v4().to_string();

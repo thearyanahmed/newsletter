@@ -1,4 +1,5 @@
 use secrecy::{Secret, ExposeSecret};
+use std::convert::{TryInto, TryFrom};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -25,9 +26,58 @@ pub struct DatabaseSettings {
 pub fn get_configuration() -> Result<Settings,config::ConfigError> {
     let mut settings = config::Config::default();
 
-    settings.merge(config::File::with_name("config"))?;
+    let base_path = std::env::current_dir().expect("failed to determine the current directory.");
+    let config_dir = base_path.join("configuration");
+
+
+    settings.merge(config::File::from(
+        config_dir.join("base")
+        ).required(true)
+    )?;
+
+    let env : Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "local".into())
+        .try_into()
+        .expect("failed to parse APP_ENVIRONMENT");
+
+    settings.merge(
+        config::File::from(
+            config_dir.join(
+                env.as_str()
+            )
+        )
+            .required(true)
+    );
 
     return settings.try_into();
+}
+
+pub enum Environment {
+    Local,
+    Production
+}
+
+impl Environment {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Environment::Local => "local",
+            Environment::Production => "local"
+        }
+    }
+}
+
+impl TryFrom<String> for Environment {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "local" => Ok(Self::Local),
+            "production" => Ok(Self::Production),
+            other => Err(format!(
+                "{} is nota supported environment. use either 'local' or 'production'", other
+            ))
+        }
+    }
 }
 
 impl DatabaseSettings {

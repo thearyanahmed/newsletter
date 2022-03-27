@@ -93,7 +93,7 @@ async fn health_check_works() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_200_for_valid_form_data() {
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     let app = spawn_app().await;
 
     let client = reqwest::Client::new();
@@ -113,7 +113,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
             .await
             .expect("failed to execute request");
 
-        assert_eq!(200,response.status().as_u16(),"api did not return 200 when the payload was {}",desc)
+        assert_eq!(400,response.status().as_u16(),"api did not return 400 when the payload was {}",desc)
     }
 }
 

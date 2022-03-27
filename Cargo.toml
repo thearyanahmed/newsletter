@@ -16,6 +16,7 @@ name = "newsletter"
 actix-web = "4.0.0"
 tracing-actix-web = "0.5"
 serde = { version = "1", features = ["derive"] }
+serde-aux = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.5.7", default-features = false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono", "migrate", "offline"] }
 config = "0.11"

@@ -29,7 +29,6 @@ pub fn get_configuration() -> Result<Settings,config::ConfigError> {
     let base_path = std::env::current_dir().expect("failed to determine the current directory.");
     let config_dir = base_path.join("configuration");
 
-
     settings.merge(config::File::from(
         config_dir.join("base")
         ).required(true)
@@ -49,7 +48,7 @@ pub fn get_configuration() -> Result<Settings,config::ConfigError> {
             .required(true)
     );
 
-    return settings.try_into();
+    settings.try_into()
 }
 
 pub enum Environment {

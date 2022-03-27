@@ -17,7 +17,7 @@ actix-web = "4.0.0"
 tracing-actix-web = "0.5"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-sqlx = { version = "0.5.7", default-features = false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.5.7", default-features = false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono", "migrate", "offline"] }
 config = "0.11"
 uuid = { version = "0.8.1", features = ["v4"] }
 chrono = "0.4.15"

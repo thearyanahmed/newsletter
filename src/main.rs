@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
 
     let address = format!("127.0.0.1:{}",config.application_port);
 
-    let connection_pool = PgPool::connect(&config.database.connection_string().expose_secret())
+    let connection_pool = PgPool::connect_lazy(&config.database.connection_string().expose_secret())
         .await
         .expect("database connection failed.");
 

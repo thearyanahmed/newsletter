@@ -7,6 +7,12 @@ pub struct Settings {
 }
 
 #[derive(serde::Deserialize)]
+pub struct ApplicationSettings {
+    pub port: u16,
+    pub host: String,
+}
+
+#[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
     pub driver: String,
     pub username: String,

@@ -37,7 +37,6 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
     }
 }
 
-
 #[tracing::instrument(
     name = "saving new subscriber details in the database",
     skip(pool,new_subscriber)

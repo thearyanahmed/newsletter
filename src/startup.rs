@@ -4,7 +4,7 @@ use actix_web::dev::Server;
 use crate::routes::{subscribe,health_check};
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
-use crate::email_client::{EmailClient, self};
+use crate::email_client::{EmailClient};
 
 pub fn run(listener: TcpListener, connection_pool: PgPool, email_client: EmailClient) -> Result<Server, std::io::Error> {
     let db_pool = web::Data::new(connection_pool);

@@ -29,7 +29,7 @@ impl EmailClient {
         }
     }
 
-    pub async fn send_email(&self, recipient: SubscriberEmail, subject: &str, html_content: &str, text_content: &str) -> Result<(), String> {
+    pub async fn send_email(&self, recipient: SubscriberEmail, subject: &str, html_content: &str, text_content: &str) -> Result<(), reqwest::Error> {
         let url = format!("{}/email",self.base_url);
 
         let request_body = SendEmailRequest {
@@ -40,11 +40,13 @@ impl EmailClient {
             text_body: text_content.to_owned(),
         };
 
-        let _builder = self
+        self
             .http_client
             .post(&url)
             .header("X-POSTMARK-SERVER-TOKEN", self.authorization_token.expose_secret())
-            .json(&request_body);
+            .json(&request_body)
+            .send()
+            .await?;
         
         Ok(())
     }
@@ -58,7 +60,7 @@ mod tests {
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph,Sentence};
     use fake::{Fake,Faker};
-    use wiremock::matchers::any;
+    use wiremock::matchers::{header_exists};
     use wiremock::{Mock,MockServer,ResponseTemplate};
 
     #[tokio::test]
@@ -67,11 +69,11 @@ mod tests {
         let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
         let email_client = EmailClient::new(mock_server.uri(),sender, Secret::new(Faker.fake()));
 
-        Mock::given(any())
+        Mock::given(header_exists("X-POSTMARK-SERVER-TOKEN"))
             .respond_with(ResponseTemplate::new(200))
-                .expect(1)
-                .mount(&mock_server)
-                .await;
+            .expect(1)
+            .mount(&mock_server)
+            .await;
 
         let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
         let subject: String = Sentence(1..2).fake();

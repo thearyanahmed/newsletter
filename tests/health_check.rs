@@ -1,4 +1,5 @@
 use std::net::TcpListener;
+use newsletter::email_client::EmailClient;
 use newsletter::startup::run;
 use newsletter::telemetry;
 use newsletter::configuration::{get_configuration, DatabaseSettings};
@@ -38,7 +39,20 @@ async fn spawn_app() -> TestApp {
 
     let db_pool = configure_database(&config.database).await;
 
-    let server = run(listener, db_pool.clone()).expect("failed to bind address.");
+    let sender_email = config.email_client.sender()
+        .expect("invalid sender email address.");
+
+    let email_client = EmailClient::new(
+        config.email_client.base_url,
+        sender_email
+    );
+
+    let server = run(
+        listener, 
+        db_pool.clone(),
+        email_client
+    )
+    .expect("failed to bind address.");
 
     let _ = tokio::spawn(server);
 

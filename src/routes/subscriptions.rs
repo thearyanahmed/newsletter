@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use chrono::Utc;
 use uuid::Uuid;
 use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
+use std::convert::TryInto;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {

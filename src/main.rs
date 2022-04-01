@@ -1,4 +1,5 @@
 use std::net::TcpListener;
+use newsletter::email_client::EmailClient;
 use newsletter::startup::run;
 use newsletter::configuration::get_configuration;
 use newsletter::telemetry;
@@ -12,6 +13,14 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_configuration().expect("failed to read configuration.");
 
+    let sender_email = config.email_client.sender()
+        .expect("invalid sender email address.");
+
+    let email_client = EmailClient::new(
+        config.email_client.base_url,
+        sender_email
+    );
+
     let address = format!("127.0.0.1:{}",&config.application.port);
 
     let connection_pool = PgPoolOptions::new()
@@ -22,5 +31,7 @@ async fn main() -> std::io::Result<()> {
 
     println!("running on {}",address);
 
-    run(listener,connection_pool)?.await
+    run(listener,connection_pool, email_client)?.await?;
+
+    Ok(())
 }

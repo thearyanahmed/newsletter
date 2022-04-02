@@ -46,7 +46,8 @@ impl EmailClient {
             .header("X-POSTMARK-SERVER-TOKEN", self.authorization_token.expose_secret())
             .json(&request_body)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
         
         Ok(())
     }
@@ -55,6 +56,7 @@ impl EmailClient {
 #[cfg(test)]
 mod tests {
     use secrecy::Secret;
+    use claim::{assert_ok,assert_err};
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
     use fake::faker::internet::en::SafeEmail;
@@ -101,8 +103,65 @@ mod tests {
         let subject: String = Sentence(1..2).fake();
         let content: String = Paragraph(1..10).fake();
 
-        let _ = email_client
+        let outcome = email_client
             .send_email(recipient, &subject, &content, &content)
             .await;
+
+        assert_ok!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_fails_if_the_server_returns_500() {
+        let mock_server  = MockServer::start().await;
+        let sender       = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let email_client = EmailClient::new(mock_server.uri(),sender, Secret::new(Faker.fake()));
+
+        Mock::given(header_exists("X-POSTMARK-SERVER-TOKEN"))
+            .and(header("Content-Type","application/json"))
+            .and(path("/email"))
+            .and(SendEmailBodyMatcher)
+            .respond_with(ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let recipient       = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let subject: String = Sentence(1..2).fake();
+        let content: String = Paragraph(1..10).fake();  
+        
+        let outcome = email_client
+            .send_email(recipient, &subject, &content, &content)
+            .await;
+
+        assert_err!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_times_out_if_the_server_takes_too_long() {
+        let mock_server  = MockServer::start().await;
+        let sender       = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let email_client = EmailClient::new(mock_server.uri(),sender, Secret::new(Faker.fake()));
+
+        let response = ResponseTemplate::new(200)
+            .set_delay(std::time::Duration::from_secs(180));
+
+        Mock::given(header_exists("X-POSTMARK-SERVER-TOKEN"))
+            .and(header("Content-Type","application/json"))
+            .and(path("/email"))
+            .and(SendEmailBodyMatcher)
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let recipient       = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let subject: String = Sentence(1..2).fake();
+        let content: String = Paragraph(1..10).fake();  
+        
+        let outcome = email_client
+            .send_email(recipient, &subject, &content, &content)
+            .await;
+
+        assert_err!(outcome);
     }
 }

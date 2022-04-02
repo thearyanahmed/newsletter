@@ -102,7 +102,7 @@ mod tests {
     }
 
     fn email_client(base_url: String) -> EmailClient {
-        EmailClient::new(base_url,email(),Secret::new(Faker.fake()),std::time::Duration::from_secs(2))
+        EmailClient::new(base_url,email(),Secret::new(Faker.fake()),std::time::Duration::from_millis(200))
     }
 
     #[tokio::test]

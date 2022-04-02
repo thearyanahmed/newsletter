@@ -40,13 +40,42 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>,email_
         return HttpResponse::InternalServerError().finish();
     }
 
-    if email_client.send_email(new_subscriber.email, "Welcome!", "Welcome to our newsletter!", "Welcome to our newsletter!")
+    if send_confirmation_email(&email_client,new_subscriber)
         .await
         .is_err() {
             return HttpResponse::InternalServerError().finish();
         }
 
     HttpResponse::Ok().finish()
+}
+
+#[tracing::instrument(
+    name = "send a confirmation email to a new subscriber",
+    skip(email_client,new_subscriber)
+)]
+async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber) -> Result<(), reqwest::Error> {
+    // as I don't have postmap api
+    let confirmation_link = "http://localhost/subscriptions/confirm";
+
+    let html_body = format!(
+        "Welcome to our newsletter! <br />\
+        Click <a href=\"{}\">here</a> to confirm your subscription.",
+        confirmation_link
+    );
+
+    let text_body = format!(
+        "Welcome to our newsletter!\n Visit {} to confirm your subscription.",
+        confirmation_link
+    );
+
+    email_client
+        .send_email(
+            new_subscriber.email,
+            "Welcome!",
+            &html_body,
+            &text_body
+        )
+        .await
 }
 
 pub fn parse_subscriber(form: FormData) -> Result<NewSubscriber, String> {

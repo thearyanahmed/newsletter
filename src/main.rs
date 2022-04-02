@@ -1,4 +1,4 @@
-use newsletter::startup::{build};
+use newsletter::startup::{Application};
 use newsletter::configuration::get_configuration;
 use newsletter::telemetry;
 
@@ -10,9 +10,9 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_configuration().expect("failed to read configuration.");
 
-    let server = build(config).await?;
+    let app = Application::build(&config).await?;
 
-    server.await?;
+    app.run_until_stopped().await?;
 
     Ok(())
 }

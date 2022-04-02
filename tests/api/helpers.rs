@@ -1,6 +1,4 @@
-use std::net::TcpListener;
-use newsletter::email_client::EmailClient;
-use newsletter::startup::{run, build, get_connection_pool};
+use newsletter::startup::{get_connection_pool, Application};
 use newsletter::telemetry;
 use newsletter::configuration::{get_configuration, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
@@ -10,6 +8,18 @@ use once_cell::sync::Lazy;
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+}
+
+impl TestApp {
+    pub async fn post_subscription(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/subscriptions",&self.address))
+            .header("Content-Type","application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("failed to execute request")
+    }
 }
 
 static TRACING: Lazy<()> = Lazy::new(||{
@@ -40,9 +50,11 @@ pub async fn spawn_app() -> TestApp {
 
     configure_database(&config.database).await;
 
-    let server = build(config).await.expect("failed to build app.");
+    let app = Application::build(&config).await.expect("failed to build application.");
 
-    let _ = tokio::spawn(server);
+    let address = format!("http://127.0.0.1:{}",app.port());
+
+    let _ = tokio::spawn(app.run_until_stopped());
 
     TestApp {
         address,

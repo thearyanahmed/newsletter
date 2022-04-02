@@ -21,8 +21,13 @@ struct SendEmailRequest<'a> {
 
 impl EmailClient {
     pub fn new(base_url: String, sender: SubscriberEmail, authorization_token: Secret<String>) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap();
+
         Self {
-            http_client: Client::new(),
+            http_client,
             base_url,
             sender,
             authorization_token
@@ -64,7 +69,7 @@ mod tests {
     use fake::{Fake,Faker};
     use wiremock::matchers::{header,header_exists,path};
     use wiremock::{Request,Mock,MockServer,ResponseTemplate};
-
+    
     struct SendEmailBodyMatcher;
 
     impl wiremock::Match for SendEmailBodyMatcher {
@@ -82,6 +87,18 @@ mod tests {
                 false
             }
         }
+    }
+
+    fn subject() -> String {
+        Sentence(1..2).fake()
+    }
+
+    fn content() -> String {
+        Paragraph(1..10).fake()
+    }
+
+    fn email() -> SubscriberEmail {
+        SubscriberEmail::parse(SafeEmail().fake()).unwrap()
     }
 
     #[tokio::test]

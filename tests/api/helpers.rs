@@ -4,10 +4,12 @@ use newsletter::configuration::{get_configuration, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
+use wiremock::MockServer;
 
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
 }
 
 impl TestApp {
@@ -39,11 +41,15 @@ static TRACING: Lazy<()> = Lazy::new(||{
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
+    let email_server = MockServer::start().await;
+
     let config = {
         let mut config = get_configuration().expect("could not load config");
 
         config.database.database_name = Uuid::new_v4().to_string();
         config.application.port = 0;
+
+        config.email_client.base_url = email_server.uri();
         
         config
     };
@@ -58,7 +64,8 @@ pub async fn spawn_app() -> TestApp {
 
     TestApp {
         address,
-        db_pool: get_connection_pool(&config.database)
+        db_pool: get_connection_pool(&config.database),
+        email_server,
     }
 }
 

@@ -7,12 +7,15 @@ use crate::routes::{subscribe,health_check};
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 use crate::email_client::{EmailClient};
+use crate::configuration::DatabaseSettings;
 
-pub async fn build(config: Settings) -> Result<Server, std::io::Error> {
-    let connection_pool = PgPoolOptions::new()
+pub fn get_connection_pool(conf: &DatabaseSettings) -> PgPool {
+    PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy_with(config.database.with_db());
-    
+        .connect_lazy_with(conf.with_db())
+}
+
+pub async fn build(config: &Settings) -> Result<Server, std::io::Error> {
     let sender_email = config
         .email_client
         .sender()
@@ -21,9 +24,9 @@ pub async fn build(config: Settings) -> Result<Server, std::io::Error> {
     let timeout = config.email_client.timeout();
 
     let email_client = EmailClient::new(
-            config.email_client.base_url,
+            config.email_client.base_url.clone(),
             sender_email,
-            config.email_client.authorization_token,
+            config.email_client.authorization_token.clone(),
             timeout
         );
 
@@ -31,7 +34,7 @@ pub async fn build(config: Settings) -> Result<Server, std::io::Error> {
 
     let listener = TcpListener::bind(address)?;
 
-    run(listener,connection_pool, email_client)
+    run(listener,get_connection_pool(&config.database), email_client)
 }
 
 pub fn run(listener: TcpListener, connection_pool: PgPool, email_client: EmailClient) -> Result<Server, std::io::Error> {

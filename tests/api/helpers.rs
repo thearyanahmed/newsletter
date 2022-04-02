@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 use newsletter::email_client::EmailClient;
-use newsletter::startup::run;
+use newsletter::startup::{run, build, get_connection_pool};
 use newsletter::telemetry;
 use newsletter::configuration::{get_configuration, DatabaseSettings};
 use sqlx::{PgPool, Executor, PgConnection, Connection};
@@ -29,42 +29,24 @@ static TRACING: Lazy<()> = Lazy::new(||{
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
-    let mut config = get_configuration().expect("could not load config");
+    let config = {
+        let mut config = get_configuration().expect("could not load config");
 
-    config.database.database_name = Uuid::new_v4().to_string();
+        config.database.database_name = Uuid::new_v4().to_string();
+        config.application.port = 0;
+        
+        config
+    };
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind to random port");
+    configure_database(&config.database).await;
 
-    let port = listener.local_addr().unwrap().port();
-
-    let db_pool = configure_database(&config.database).await;
-
-    let sender_email = config.email_client.sender()
-        .expect("invalid sender email address.");
-
-    let timeout = config.email_client.timeout();
-
-    let email_client = EmailClient::new(
-        config.email_client.base_url,
-        sender_email,
-        config.email_client.authorization_token,
-        timeout
-    );
-
-    let server = run(
-        listener, 
-        db_pool.clone(),
-        email_client
-    )
-    .expect("failed to bind address.");
+    let server = build(config).await.expect("failed to build app.");
 
     let _ = tokio::spawn(server);
 
-    let address = format!("http://127.0.0.1:{}",port);
-
     TestApp {
         address,
-        db_pool
+        db_pool: get_connection_pool(&config.database)
     }
 }
 

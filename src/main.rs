@@ -20,6 +20,7 @@ async fn main() -> std::io::Result<()> {
         config.email_client.base_url,
         sender_email,
         config.email_client.authorization_token,
+        std::time::Duration::from_secs(2)
     );
 
     let address = format!("127.0.0.1:{}",&config.application.port);

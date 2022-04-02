@@ -16,11 +16,13 @@ async fn main() -> std::io::Result<()> {
     let sender_email = config.email_client.sender()
         .expect("invalid sender email address.");
 
+    let timeout = config.email_client.timeout();
+
     let email_client = EmailClient::new(
         config.email_client.base_url,
         sender_email,
         config.email_client.authorization_token,
-        std::time::Duration::from_secs(2)
+        timeout
     );
 
     let address = format!("127.0.0.1:{}",&config.application.port);

@@ -25,7 +25,7 @@ async fn confirmation_link_url_returns_a_200_if_called() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscription(body.into()).await;
+    app.post_subscriptions(body.into()).await;
 
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
     let confirmation_links = app.get_confirmation_links(email_request);
@@ -48,7 +48,7 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscription(body.into()).await;
+    app.post_subscriptions(body.into()).await;
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
     let confirmation_links = app.get_confirmation_links(&email_request);
 

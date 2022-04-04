@@ -13,7 +13,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     ];
 
     for (body, desc) in test_cases {
-        let response = app.post_subscription(body.into()).await;
+        let response = app.post_subscriptions(body.into()).await;
 
         assert_eq!(400,response.status().as_u16(),"api did not return 400 when the payload was {}",desc)
     }
@@ -29,7 +29,7 @@ async fn subscribe_returns_a_400_for_invalid_form_data() {
     ];
 
     for (form_body, error) in test_cases {
-        let response = app.post_subscription(form_body.into()).await;
+        let response = app.post_subscriptions(form_body.into()).await;
 
         assert_eq!(400,response.status().as_u16(),"the api did not fail with 400 bad request when the payload was {}",error);
     }
@@ -47,7 +47,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .mount(&app.email_server)
         .await;
 
-    let response = app.post_subscription(body.into()).await;
+    let response = app.post_subscriptions(body.into()).await;
 
     assert_eq!(200,response.status().as_u16());
 
@@ -72,7 +72,7 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
         .mount(&app.email_server)
         .await;
 
-    let response = app.post_subscription(body.into()).await;
+    let response = app.post_subscriptions(body.into()).await;
 
     assert_eq!(200,response.status().as_u16());
 }
@@ -89,7 +89,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscription(body.into()).await;
+    app.post_subscriptions(body.into()).await;
 
     let email_request = &app
         .email_server
@@ -116,7 +116,7 @@ async fn subscribe_persists_the_new_subscriber() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscription(body.into()).await;
+    app.post_subscriptions(body.into()).await;
 
     let saved = sqlx::query!("SELECT email, name, status FROM subscriptions")
         .fetch_one(&app.db_pool)
@@ -126,4 +126,22 @@ async fn subscribe_persists_the_new_subscriber() {
     assert_eq!(saved.email, email);
     assert_eq!(saved.name, name);
     assert_eq!(saved.status, "pending_confirmation");
+}
+
+#[tokio::test]
+async fn subscribe_fails_if_there_is_a_fatal_database_error() {
+    // Arrange
+    let app = spawn_app().await;
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    // Sabotage the database
+    sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token;",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+
+    // Act
+    let response = app.post_subscriptions(body.into()).await;
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 500);
 }

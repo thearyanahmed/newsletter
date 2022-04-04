@@ -4,6 +4,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use crate::{domain::{NewSubscriber, SubscriberName, SubscriberEmail}, email_client::{EmailClient}};
 use std::convert::TryInto;
+use crate::startup::ApplicationBaseUrl;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -30,7 +31,12 @@ impl TryFrom<FormData> for NewSubscriber {
         subscriber_name = %form.name
     )
 )]
-pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>,email_client: web::Data<EmailClient>) -> HttpResponse {
+pub async fn subscribe(
+    form: web::Form<FormData>,
+    pool: web::Data<PgPool>,
+    email_client: web::Data<EmailClient>,
+    base_url: ApplicationBaseUrl
+) -> HttpResponse {
     let new_subscriber = match form.0.try_into() {
         Ok(sub) => sub,
         Err(_) => return HttpResponse::BadRequest().finish() 
@@ -40,7 +46,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>,email_
         return HttpResponse::InternalServerError().finish();
     }
 
-    if send_confirmation_email(&email_client,new_subscriber)
+    if send_confirmation_email(&email_client,new_subscriber,base_url.0)
         .await
         .is_err() {
             return HttpResponse::InternalServerError().finish();
@@ -53,9 +59,9 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>,email_
     name = "send a confirmation email to a new subscriber",
     skip(email_client,new_subscriber)
 )]
-async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber) -> Result<(), reqwest::Error> {
+async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber, base_url: &str) -> Result<(), reqwest::Error> {
     // as I don't have postmap api
-    let confirmation_link = "http://localhost/subscriptions/confirm";
+    let confirmation_link = format!("{}/subscriptions/confirm",base_url);
 
     let html_body = format!(
         "Welcome to our newsletter! <br />\

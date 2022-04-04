@@ -14,6 +14,7 @@ async fn confirmations_without_token_are_rejected_with_400() {
     assert_eq!(response.status().as_u16(),400)
 }
 
+#[tokio::test]
 async fn confirmation_link_url_returns_a_200_if_called() {
     let app = spawn_app().await;
     let body = "name=aryan&email=aryan@gmail.com";
@@ -41,9 +42,11 @@ async fn confirmation_link_url_returns_a_200_if_called() {
     };
 
     let raw_confirmation_link = &get_link(&body["html_body"].as_str().unwrap());
-    let confirmation_link = Url::parse(raw_confirmation_link).unwrap();
+    let mut confirmation_link = Url::parse(raw_confirmation_link).unwrap();
 
     assert_eq!(confirmation_link.host_str().unwrap(),"127.0.0.1");
+
+    confirmation_link.set_port(Some(app.port)).unwrap();
 
     let response = reqwest::get(confirmation_link)
         .await

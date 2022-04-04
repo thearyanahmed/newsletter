@@ -81,6 +81,12 @@ pub enum Environment {
     Production
 }
 
+impl ApplicationSettings {
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+}
+
 impl Environment {
     pub fn as_str(&self) -> &'static str {
         match self {

@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 use crate::email_client::{EmailClient};
 use crate::configuration::DatabaseSettings;
+use actix_web::web::Data;
 
 pub struct Application {
     port: u16,
@@ -38,7 +39,7 @@ impl Application {
 
         let port = listener.local_addr().unwrap().port();
 
-        let server = run(listener,connection_pool, email_client, config.application.base_url)?;
+        let server = run(listener, connection_pool, email_client, (&config.application.base_url()).to_string())?;
 
         Ok(Self {port, server})
     }
@@ -63,6 +64,7 @@ pub fn get_connection_pool(conf: &DatabaseSettings) -> PgPool {
 fn run(listener: TcpListener, connection_pool: PgPool, email_client: EmailClient, base_url: String) -> Result<Server, std::io::Error> {
     let db_pool = web::Data::new(connection_pool);
     let email_client = web::Data::new(email_client);
+    let base_url = Data::new(ApplicationBaseUrl(base_url));
 
     let server = HttpServer::new(move || {
         App::new()

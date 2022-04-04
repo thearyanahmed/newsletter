@@ -9,32 +9,25 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng,Rng};
 use std::fmt::Formatter;
 use actix_web::http::StatusCode;
-use std::error::Error;
 
 pub struct StoreTokenError(sqlx::Error);
 
 impl ResponseError for StoreTokenError {}
 
+#[derive(thiserror::Error)]
 pub enum SubscribeError {
+    #[error("{0}")]
     ValidationError(String),
+    #[error("failed to store token")]
     StoreTokenError(StoreTokenError),
+    #[error("failed to send email")]
     SendEmailError(reqwest::Error),
+    #[error("failed to acquire db pool")]
     PoolError(sqlx::Error),
+    #[error("failed to insert subscriber")]
     InsertSubscribeError(sqlx::Error),
+    #[error("failed to commit")]
     TransactionCommitError(sqlx::Error),
-}
-
-impl std::error::Error for SubscribeError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            SubscribeError::ValidationError(_) => None,
-            SubscribeError::StoreTokenError(e) => Some(e),
-            SubscribeError::SendEmailError(e) => Some(e),
-            SubscribeError::PoolError(e) => Some(e),
-            SubscribeError::InsertSubscribeError(e) => Some(e),
-            SubscribeError::TransactionCommitError(e) => Some(e),
-        }
-    }
 }
 
 impl std::error::Error for StoreTokenError {
@@ -46,31 +39,6 @@ impl std::error::Error for StoreTokenError {
 impl std::fmt::Debug for StoreTokenError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         error_chain_fmt(self,f)
-    }
-}
-
-
-impl std::fmt::Display for SubscribeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SubscribeError::ValidationError(e) => write!(f, "{}", e),
-            SubscribeError::StoreTokenError(_) => write!(
-                f,
-                "Failed to store the confirmation token for a new subscriber."
-            ),
-            SubscribeError::SendEmailError(_) => {
-                write!(f, "Failed to send a confirmation email.")
-            },
-            SubscribeError::PoolError(_) => {
-                write!(f,"failed to acquire a postgres connection from the pool")
-            },
-            SubscribeError::InsertSubscribeError(_) => {
-                write!(f,"failed to insert new subscriber in the database")
-            },
-            SubscribeError::TransactionCommitError(_) => {
-                write!(f,"failed to ocmmit sql transaction to store a new subscriber")
-            }
-        }
     }
 }
 

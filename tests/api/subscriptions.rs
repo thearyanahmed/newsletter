@@ -77,8 +77,6 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
     assert_eq!(200,response.status().as_u16());
 }
 
-
-
 #[tokio::test]
 async fn subscribe_sends_a_confirmation_email_with_a_link() {
     let app = spawn_app().await;

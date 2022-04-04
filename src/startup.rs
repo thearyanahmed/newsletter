@@ -39,7 +39,7 @@ impl Application {
 
         let port = listener.local_addr().unwrap().port();
 
-        let server = run(listener, connection_pool, email_client, (&config.application.base_url()).to_string())?;
+        let server = run(listener, connection_pool, email_client, format!("{}",&config.application.base_url))?;
 
         Ok(Self {port, server})
     }
@@ -71,7 +71,7 @@ fn run(listener: TcpListener, connection_pool: PgPool, email_client: EmailClient
             .wrap(TracingLogger::default())
             .route("/health_check",web::get().to(health_check))
             .route("/subscriptions",web::post().to(subscribe))
-            .route("/subscriptions/confirm",web::post().to(confirm))
+            .route("/subscriptions/confirm",web::get().to(confirm))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())

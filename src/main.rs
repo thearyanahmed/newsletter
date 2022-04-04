@@ -4,7 +4,7 @@ use newsletter::telemetry;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let subscriber = telemetry::get_subscriber("newsletter_prod".into(),"info".into(),std::io::stdout);
+    let subscriber = telemetry::get_subscriber("newsletter_dev".into(),"info".into(),std::io::stdout);
 
     telemetry::init_subscriber(subscriber);
 

@@ -48,10 +48,11 @@ async fn confirmation_link_url_returns_a_200_if_called() {
 
     confirmation_link.set_port(Some(app.port)).unwrap();
 
+    println!("confirmation link is = {}",confirmation_link);
+
     let response = reqwest::get(confirmation_link)
         .await
         .unwrap();
 
     assert_eq!(response.status().as_u16(),200);
-
 }

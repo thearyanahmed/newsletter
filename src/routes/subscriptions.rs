@@ -57,7 +57,9 @@ pub async fn subscribe(
 )]
 async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber, base_url: &str) -> Result<(), reqwest::Error> {
     // as I don't have postmap api
-    let confirmation_link = format!("{}/subscriptions/confirm",base_url);
+    let confirmation_link = format!("{}/subscriptions/confirm?subscription_token=mytoken",base_url);
+
+    println!("send_confirmation_email link => {}",confirmation_link);
 
     let html_body = format!(
         "Welcome to our newsletter! <br />\

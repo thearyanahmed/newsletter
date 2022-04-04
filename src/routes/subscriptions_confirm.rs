@@ -7,7 +7,7 @@ pub struct Parameters {
 
 #[tracing::instrument(
     name = "confirm a pending subscriber",
-    skip = (_parameters)
+    skip(_parameters)
 )]
 pub async fn confirm(_parameters: web::Query<Parameters>) -> HttpResponse {
     HttpResponse::Ok().finish()

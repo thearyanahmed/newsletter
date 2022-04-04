@@ -32,15 +32,15 @@ async fn confirmation_link_url_returns_a_200_if_called() {
     let get_link = |s: &str| {
         let links : Vec<_> = linkify::LinkFinder::new()
             .links(s)
-            .filter(|l| *l.kind() == linkify::LinkFinder::Url)
-            .collect_vec();
+            .filter(|l| *l.kind() == linkify::LinkKind::Url)
+            .collect();
 
         assert_eq!(links.len(),1);
 
         links[0].as_str().to_owned()
     };
 
-    let raw_confirmation_link = &get_link(&body["html_body"].as_str().wrap());
+    let raw_confirmation_link = &get_link(&body["html_body"].as_str().unwrap());
     let confirmation_link = Url::parse(raw_confirmation_link).unwrap();
 
     assert_eq!(confirmation_link.host_str().unwrap(),"127.0.0.1");

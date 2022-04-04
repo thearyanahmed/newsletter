@@ -1,3 +1,6 @@
 #!/bin/sh
 
+echo "increasing number of open files to 10000 \n"
+ulimit -n 10000
+
 cargo watch -x check -x test -x run

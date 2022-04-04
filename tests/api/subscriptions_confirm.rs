@@ -28,29 +28,9 @@ async fn confirmation_link_url_returns_a_200_if_called() {
     app.post_subscription(body.into()).await;
 
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
-    let body : serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+    let confirmation_links = app.get_confirmation_links(email_request);
 
-    let get_link = |s: &str| {
-        let links : Vec<_> = linkify::LinkFinder::new()
-            .links(s)
-            .filter(|l| *l.kind() == linkify::LinkKind::Url)
-            .collect();
-
-        assert_eq!(links.len(),1);
-
-        links[0].as_str().to_owned()
-    };
-
-    let raw_confirmation_link = &get_link(&body["html_body"].as_str().unwrap());
-    let mut confirmation_link = Url::parse(raw_confirmation_link).unwrap();
-
-    assert_eq!(confirmation_link.host_str().unwrap(),"127.0.0.1");
-
-    confirmation_link.set_port(Some(app.port)).unwrap();
-
-    println!("confirmation link is = {}",confirmation_link);
-
-    let response = reqwest::get(confirmation_link)
+    let response = reqwest::get(confirmation_links.html)
         .await
         .unwrap();
 

@@ -77,13 +77,14 @@ pub async fn subscribe(
 )]
 pub async fn store_token(pool: &PgPool, subscriber_id: Uuid, subscription_token: &str) -> Result<(),sqlx::Error> {
     sqlx::query!(
-        r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
-        subscription_token, subscriber_id
-    )
+            r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
+            subscription_token, subscriber_id
+        )
         .execute(pool)
         .await
         .map_err(|e| {
-            tracing::error!("failed to execute query: {:?}",e)
+            tracing::error!("failed to execute query: {:?}",e);
+            e
         })?;
 
     Ok(())

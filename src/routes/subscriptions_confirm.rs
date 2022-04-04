@@ -29,10 +29,28 @@ pub async fn get_subscriber_id_from_token(pool: &PgPool, subscription_token: &st
         .fetch_optional(pool)
         .await
         .map_err(|e| {
-            tracing::error!("cound not execute query. {:?}",e);
-
+            tracing::error!("could not execute query. {:?}",e);
             e
         })?;
 
     Ok(result.map(|r| r.subscriber_id))
+}
+
+#[tracing::instrument(
+    name = "confirm users subscription",
+    skip(pool)
+)]
+pub async fn confirm_subscription(pool: &PgPool, subscriber_id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+            r#"UPDATE subscriptions SET status = 'confirmed' WHERE id = $1"#,
+            subscriber_id
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("failed to execute query. {:?}",e);
+            e
+        })?;
+
+    Ok(())
 }

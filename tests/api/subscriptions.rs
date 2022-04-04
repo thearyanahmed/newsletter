@@ -50,6 +50,13 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let response = app.post_subscription(body.into()).await;
 
     assert_eq!(200,response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("failed to fetch saved subscription");
+
+    assert_eq!(saved.email,"aryan@gmail.com");
 }
 
 #[tokio::test]
@@ -65,8 +72,12 @@ async fn subscribe_sends_a_confirmation_email_for_valid_data() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscription(body.into()).await;
+    let response = app.post_subscription(body.into()).await;
+
+    assert_eq!(200,response.status().as_u16());
 }
+
+
 
 #[tokio::test]
 async fn subscribe_sends_a_confirmation_email_with_a_link() {

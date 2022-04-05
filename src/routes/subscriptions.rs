@@ -9,25 +9,37 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng,Rng};
 use std::fmt::Formatter;
 use actix_web::http::StatusCode;
+use anyhow::Context;
 
 pub struct StoreTokenError(sqlx::Error);
 
 impl ResponseError for StoreTokenError {}
 
+// #[derive(thiserror::Error)]
+// pub enum SubscribeError {
+//     #[error("{0}")]
+//     ValidationError(String),
+//     #[error("failed to store token")]
+//     StoreTokenError(StoreTokenError),
+//     #[error("failed to send email")]
+//     SendEmailError(reqwest::Error),
+//     #[error("failed to acquire db pool")]
+//     PoolError(sqlx::Error),
+//     #[error("failed to insert subscriber")]
+//     InsertSubscribeError(sqlx::Error),
+//     #[error("failed to commit")]
+//     TransactionCommitError(sqlx::Error),
+// }
+
 #[derive(thiserror::Error)]
 pub enum SubscribeError {
     #[error("{0}")]
     ValidationError(String),
-    #[error("failed to store token")]
-    StoreTokenError(StoreTokenError),
-    #[error("failed to send email")]
-    SendEmailError(reqwest::Error),
-    #[error("failed to acquire db pool")]
-    PoolError(sqlx::Error),
-    #[error("failed to insert subscriber")]
-    InsertSubscribeError(sqlx::Error),
-    #[error("failed to commit")]
-    TransactionCommitError(sqlx::Error),
+    #[error(transparent)]
+    ServerSideError(#[from] anyhow::Error),
+
+    // #[error("failed to insert new subscriber in the database")]
+    // InsertSubscriberError(#[source] sqlx::Error)
 }
 
 impl std::error::Error for StoreTokenError {
@@ -48,17 +60,19 @@ impl std::fmt::Debug for SubscribeError {
     }
 }
 
-impl From <reqwest::Error> for SubscribeError {
-    fn from(e: reqwest::Error) -> Self {
-        Self::SendEmailError(e)
-    }
-}
-
-impl From<StoreTokenError> for SubscribeError {
-    fn from(e: StoreTokenError) -> Self {
-        Self::StoreTokenError(e)
-    }
-}
+// impl From <reqwest::Error> for SubscribeError {
+//     fn from(e: reqwest::Error) -> Self {
+//         // Self::SendEmailError(e)
+//         Self::ServerSideError(e)
+//     }
+// }
+//
+// impl From<StoreTokenError> for SubscribeError {
+//     fn from(e: StoreTokenError) -> Self {
+//         // Self::StoreTokenError(e)
+//         Self::ServerSideError(e)
+//     }
+// }
 
 impl From<String> for SubscribeError {
     fn from(s: String) -> Self {
@@ -66,17 +80,11 @@ impl From<String> for SubscribeError {
     }
 }
 
-
 impl ResponseError for SubscribeError {
     fn status_code(&self) -> StatusCode {
         match self {
             SubscribeError::ValidationError(_) => StatusCode::BAD_REQUEST,
-            SubscribeError::PoolError(_)
-            | SubscribeError::TransactionCommitError(_)
-            | SubscribeError::InsertSubscribeError(_)
-            | SubscribeError::StoreTokenError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            | SubscribeError::SendEmailError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-
+            SubscribeError::ServerSideError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -140,20 +148,31 @@ pub async fn subscribe(
     base_url: web::Data<ApplicationBaseUrl>
 ) -> Result<HttpResponse, SubscribeError> {
 
-    let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
+    let new_subscriber = form.0.try_into()
+        .map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = pool.begin().await.map_err(SubscribeError::PoolError)?;
+    let mut transaction = pool.begin()
+        .await
+        .context("failed to acquire a postgres connection from the pool")?;
 
     // create a subscriber record
-    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber).await.map_err(SubscribeError::InsertSubscribeError)?;
+    let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
+        .await
+        .context("failed to insert subscriber id")?;
 
     let subscription_token = generate_subscription_token();
 
-    store_token(&mut transaction, subscriber_id, &subscription_token).await?;
+    store_token(&mut transaction, subscriber_id, &subscription_token)
+        .await
+        .context("failed to store token")?;
 
-    transaction.commit().await.map_err(SubscribeError::TransactionCommitError)?;
+    transaction.commit()
+        .await
+        .context("failed to commit")?;
 
-    send_confirmation_email(&email_client, new_subscriber, &base_url.0, &subscription_token).await?;
+    send_confirmation_email(&email_client, new_subscriber, &base_url.0, &subscription_token)
+        .await
+        .context("failed to send confirmation email")?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -185,7 +204,7 @@ pub async fn store_token(
     skip(email_client,new_subscriber,base_url,subscription_token)
 )]
 async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber, base_url: &str,subscription_token: &str) -> Result<(), reqwest::Error> {
-    // as I don't have postmap api
+    // as I don't have post-map api
     let confirmation_link = format!("{}/subscriptions/confirm?subscription_token={}",base_url,subscription_token);
 
     println!("send_confirmation_email link => {}",confirmation_link);
@@ -233,11 +252,7 @@ pub async fn insert_subscriber(transaction: &mut Transaction<'_,Postgres>, new_s
             uuid, new_subscriber.email.as_ref(), new_subscriber.name.as_ref(), Utc::now()
         )
         .execute(transaction)
-        .await
-        .map_err(|e| {
-            tracing::error!("failed to execute query: {:?}",e);
-            e
-        })?;
+        .await?;
 
     Ok(uuid)
 }

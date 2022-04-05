@@ -1,4 +1,5 @@
 use validator::validate_email;
+use std::fmt::Formatter;
 
 #[derive(Debug,Clone)]
 pub struct SubscriberEmail(String);
@@ -10,6 +11,13 @@ impl SubscriberEmail {
         } else {
             Err(format!("{} is not a valid subscriber email",s))
         }
+    }
+}
+
+
+impl std::fmt::Display for SubscriberEmail {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

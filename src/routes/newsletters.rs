@@ -49,22 +49,16 @@ impl ResponseError for PublishError {
 #[tracing::instrument(name = "get confirmed subscribers", skip(pool))]
 async fn get_confirmed_subscribers(pool: &PgPool)
     -> Result<Vec<Result<ConfirmedSubscriber,anyhow::Error>>,anyhow::Error> {
-    struct Row {
-        email: String,
-    }
 
-    let rows = sqlx::query_as!(
-            Row,
+    let confirmed_subscribers = sqlx::query!(
             r#"SELECT email FROM subscriptions WHERE status = 'confirmed'"#
         )
         .fetch_all(pool)
-        .await?;
-
-    let confirmed_subscribers = rows
-        .into_inter()
+        .await?
+        .into_iter()
         .map(|r| match SubscriberEmail::parse(r.email) {
             Ok(email) => Ok(ConfirmedSubscriber {email}),
-            Err(e) => Err(anyhow::anyhow!(err))
+            Err(err) => Err(anyhow::anyhow!(err))
         })
         .collect();
 
@@ -80,15 +74,26 @@ pub async fn publish_newsletter(
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
     for subscriber in subscribers {
-        email_client
-            .send_email(
-                subscriber.email,
-                &body.title,
-                &body.content.html,
-                &body.content.text
-            )
-            .await
-            .with_context(|| format!("failed to send newsletter issue to"))?;
+        match subscriber {
+            Ok(subscriber) => {
+                email_client
+                    .send_email(
+                        &subscriber.email,
+                        &body.title,
+                        &body.content.html,
+                        &body.content.text
+                    )
+                    .await
+                    .with_context(|| format!("failed to send newsletter issue to {}",subscriber.email))?;
+            },
+            Err(err) => {
+                tracing::warn!(
+                    err.cause_chain = ?err,
+                    "Skipping a confirmed subscriber. \
+                    There stored contact details (email) is invalid."
+                )
+            }
+        }
     }
 
     Ok(HttpResponse::Ok().finish())

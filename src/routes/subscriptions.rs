@@ -170,7 +170,7 @@ pub async fn subscribe(
         .await
         .context("failed to commit")?;
 
-    send_confirmation_email(&email_client, new_subscriber, &base_url.0, &subscription_token)
+    send_confirmation_email(&email_client, &new_subscriber, &base_url.0, &subscription_token)
         .await
         .context("failed to send confirmation email")?;
 
@@ -203,7 +203,7 @@ pub async fn store_token(
     name = "send a confirmation email to a new subscriber",
     skip(email_client,new_subscriber,base_url,subscription_token)
 )]
-async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: NewSubscriber, base_url: &str,subscription_token: &str) -> Result<(), reqwest::Error> {
+async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: &NewSubscriber, base_url: &str,subscription_token: &str) -> Result<(), reqwest::Error> {
     // as I don't have post-map api
     let confirmation_link = format!("{}/subscriptions/confirm?subscription_token={}",base_url,subscription_token);
 
@@ -222,7 +222,7 @@ async fn send_confirmation_email(email_client: &EmailClient, new_subscriber: New
 
     email_client
         .send_email(
-            new_subscriber.email,
+            &new_subscriber.email,
             "Welcome!",
             &html_body,
             &text_body

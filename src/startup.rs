@@ -3,7 +3,7 @@ use actix_web::{HttpServer, web, App};
 use actix_web::dev::Server;
 use sqlx::postgres::PgPoolOptions;
 use crate::configuration::Settings;
-use crate::routes::{subscribe,health_check,confirm};
+use crate::routes::{subscribe,health_check,confirm,publish_newsletter};
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 use crate::email_client::{EmailClient};
@@ -72,6 +72,7 @@ fn run(listener: TcpListener, connection_pool: PgPool, email_client: EmailClient
             .route("/health_check",web::get().to(health_check))
             .route("/subscriptions",web::post().to(subscribe))
             .route("/subscriptions/confirm",web::get().to(confirm))
+            .route("/newsletters",web::post().to(publish_newsletter))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())

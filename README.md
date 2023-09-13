@@ -1,5 +1,3 @@
-This project is a follow-along from the book Zero To Prod by [Luca Palmieri](https://github.com/LukeMathWalker). 
+# newsletter
 
-This is somewhat the first project I worked on. 
-
-**Summary** Rust is amazing. 
+Tinkering with `rust` and some popular libraries as `actix`, `sqlx` , `tracing` etc.
